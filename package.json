@@ -10,7 +10,8 @@
   "scripts": {
     "lint": "eslint .",
     "build": "js-compute-runtime --enable-pbl app/index.js",
-    "start": "fastly compute serve --verbose"
+    "start": "fastly compute serve --verbose",
+    "deploy": "fastly compute publish && ./upload-polyfill.sh"
   },
   "license": "MIT",
   "dependencies": {
