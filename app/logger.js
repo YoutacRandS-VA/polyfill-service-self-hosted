@@ -1,3 +1,4 @@
+import { env } from 'fastly:env';
 import {ConfigStore} from 'fastly:config-store';
 var humanize = (times) => {
 	const [delimiter, separator] = [",", "."];
@@ -34,14 +35,14 @@ var logger = (function_ = console.log) => {
 		const url = c.req.url;
 		let start = Date.now();
 		if (shouldLog()) {
-			log(function_, `<-- (Incoming) FASTLY_SERVICE_VERSION: ${fastly.env.get('FASTLY_SERVICE_VERSION')}` /* Incoming */ , method, url);
+			log(function_, `<-- (Incoming) FASTLY_SERVICE_VERSION: ${env('FASTLY_SERVICE_VERSION')}` /* Incoming */ , method, url);
 			await next();
 		} else {
 			await next();
 		}
 		let end = (Date.now()-start)/1000
 		if (end > 10 || shouldLog() || c.error) {
-			log(function_, `--> (Outgoing) FASTLY_SERVICE_VERSION: ${fastly.env.get('FASTLY_SERVICE_VERSION')}` /* Outgoing */ , method, url, c.res.status, time(start));
+			log(function_, `--> (Outgoing) FASTLY_SERVICE_VERSION: ${env('FASTLY_SERVICE_VERSION')}` /* Outgoing */ , method, url, c.res.status, time(start));
 		}
 	};
 };

@@ -1,8 +1,8 @@
+// eslint-disable-next-line no-undef
 module.exports = {
 	env: {
-		commonjs: true,
 		es6: true,
-		node: true,
+		serviceworker: true,
 	},
 	extends: ["eslint:recommended", "plugin:unicorn/recommended"],
 	rules: {
@@ -14,8 +14,8 @@ module.exports = {
 		"unicorn/no-await-expression-member": 0,
 	},
 	globals: {
-		Atomics: "readonly",
-		SharedArrayBuffer: "readonly",
+		ReadableStream: true,
+		TransformStream: true,
 	},
 	parserOptions: {
 		ecmaVersion: 2023,

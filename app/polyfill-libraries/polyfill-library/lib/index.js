@@ -1,7 +1,7 @@
+// @ts-check
 import {array as toposort} from "toposort";
 import UA from "@financial-times/polyfill-useragent-normaliser";
-import {UA as oldUA} from './old-ua.js';
-import {listPolyfills, getConfigAliases, getPolyfillMeta, streamPolyfillSource} from "./sources.js";
+import {getConfigAliases, getPolyfillMeta, streamPolyfillSource} from "./sources.js";
 
 const encoder = new TextEncoder()
 function stringToReadableStream(value) {
@@ -11,14 +11,6 @@ function stringToReadableStream(value) {
 			controller.close();
 		},
 	});
-}
-
-/**
- * Get a list of all the polyfills which exist within the collection of polyfill sources.
- * @returns {Promise<Array>} A promise which resolves with an array of all the polyfills within the collection.
- */
-export function listAllPolyfills(store) {
-	return listPolyfills(store);
 }
 
 function hasProperty(property, object) {
@@ -75,10 +67,10 @@ export function getOptions(options_ = {}) {
  * @param {String} [options_.uaString=''] - The user-agent string to check each feature against.
  * @return {Promise<Object>} - Canonicalised feature definitions filtered for UA
  */
-export async function getPolyfills(options_, store, version) {
+export async function getPolyfills(options_) {
 	// const now = Date.now();
 	const options = getOptions(options_);
-	const ua = version === '3.25.1' ? new oldUA(options.uaString) : new UA(options.uaString);
+	const ua = new UA(options.uaString);
 	const featureNames = new Set(Object.keys(options.features));
 	const targetedFeatures = Object.create(null);
 
@@ -120,9 +112,8 @@ export async function getPolyfills(options_, store, version) {
 		// Add each feature.
 		let alias;
 		try {
-			alias = await getConfigAliases(store, featureName);
-		} catch (e) {
-		}
+			alias = await getConfigAliases(featureName);
+		} catch { /* empty */ }
 		if (alias) {
 			const aliasProperties = {
 				aliasOf: new Set(properties.aliasOf),
@@ -151,9 +142,8 @@ export async function getPolyfills(options_, store, version) {
 
 		let meta;
 		try {
-			meta = await getPolyfillMeta(store, featureName)
-		} catch (e) {
-		}
+			meta = await getPolyfillMeta(featureName)
+		} catch { /* empty */ }
 		if (!meta) {
 			// this is a bit strange but the best thing I could come up with.
 			// by adding the feature, it will show up as an "unrecognized" polyfill
@@ -202,20 +192,21 @@ export async function getPolyfills(options_, store, version) {
  * @param {Array<String>} [options_.excludes=[]] - Which features should be excluded from the returned object.
  * @param {String} [options_.uaString=''] - The user-agent string to check each feature against.
  * @param {Boolean} [options_.stream=false] - Whether to return a stream or a string of the polyfill bundle.
- * @return {Promise<String> | ReadStream} - Polyfill bundle as either a utf-8 stream or a promise of a utf-8 string.
+ * @return {Promise<String | ReadableStream>} - Polyfill bundle as either a utf-8 stream or a promise of a utf-8 string.
  */
-export async function getPolyfillString(options_, store, appVersion) {
+export async function getPolyfillString(options_) {
 	// const now = Date.now();
 	const options = getOptions(options_);
 	const lf = options.minify ? "" : "\n";
 	const allWarnText =
 		"Using the `all` alias with polyfill.io is a very bad idea. In a future version of the service, `all` will deliver the same behaviour as `default`, so we recommend using `default` instead.";
-	const appVersionText = "Polyfill service " + "v" + appVersion
+	const appVersionText = "Polyfill service " + "v3.111.0"
 	let output = [];
 	const explainerComment = [];
 	// Build a polyfill bundle of polyfill sources sorted in dependency order
-	const targetedFeatures = await getPolyfills(options, store);
+	const targetedFeatures = await getPolyfills(options);
 	const warnings = {
+		/** @type {Array<string>} */
 		unknown: []
 	};
 	const featureNodes = [];
@@ -224,10 +215,8 @@ export async function getPolyfillString(options_, store, appVersion) {
 	await Promise.all(
 		Object.keys(targetedFeatures).map(featureName => {
 			const feature = targetedFeatures[featureName];
-			return getPolyfillMeta(store, featureName).then(polyfill => {
-				if (!polyfill) {
-					warnings.unknown.push(featureName);
-				} else {
+			return getPolyfillMeta(featureName).then(polyfill => {
+				if (polyfill) {
 					featureNodes.push(featureName);
 
 					if (polyfill.dependencies) {
@@ -246,6 +235,8 @@ export async function getPolyfillString(options_, store, appVersion) {
 							' (required by "' + [...feature.dependencyOf, ...feature.aliasOf].join('", "') +
 							'")' :
 							"");
+				} else {
+					warnings.unknown.push(featureName);
 				}
 			});
 		})
@@ -257,7 +248,12 @@ export async function getPolyfillString(options_, store, appVersion) {
 
 	const sortedFeatures = toposort(featureNodes, featureEdges);
 
-	if (!options.minify) {
+	if (options.minify) {
+		explainerComment.push(
+			appVersionText,
+			"Disable minification (remove `.min` from URL path) for more info"
+		);
+	} else {
 		explainerComment.push(
 			appVersionText,
 			"For detailed credits and licence information see https://github.com/JakeChampion/polyfill-service.",
@@ -282,11 +278,6 @@ export async function getPolyfillString(options_, store, appVersion) {
 		if ("all" in options.features) {
 			explainerComment.push("", allWarnText);
 		}
-	} else {
-		explainerComment.push(
-			appVersionText,
-			"Disable minification (remove `.min` from URL path) for more info"
-		);
 	}
 	output.push(stringToReadableStream("/* " + explainerComment.join("\n * ") + " */\n\n"));
 
@@ -298,17 +289,16 @@ export async function getPolyfillString(options_, store, appVersion) {
 		for (const featureName of sortedFeatures) {
 			const wrapInDetect = targetedFeatures[featureName].flags.has("gated");
 			if (wrapInDetect) {
-				const meta = await getPolyfillMeta(store, featureName);
+				const meta = await getPolyfillMeta(featureName);
 				if (meta.detectSource) {
 					output.push(stringToReadableStream("if (!(" + meta.detectSource + ")) {" + lf));
 				}
-				output.push(await streamPolyfillSource(store, featureName, options.minify ? "min" : "raw"));
+				output.push(await streamPolyfillSource(featureName, options.minify ? "min" : "raw"));
 				if (meta.detectSource) {
 					output.push(stringToReadableStream(lf + "}" + lf + lf));
 				}
 			} else {
-				output.push(await streamPolyfillSource(store,
-					featureName,
+				output.push(await streamPolyfillSource(featureName,
 					options.minify ? "min" : "raw"
 				));
 			}
@@ -336,10 +326,14 @@ export async function getPolyfillString(options_, store, appVersion) {
 			"();"));
 	}
 	let {readable, writable} = new TransformStream;
-	output.reduce(
-		(a, res, i, arr) => a.then(() => res?.pipeTo(writable, {preventClose: (i+1) !== arr.length})),
-		Promise.resolve()
-	)
-	// console.log('getPolyfillString', 'took', Date.now() - now, options_, store, appVersion);
+
+	let resolve = Promise.resolve();
+	let length = output.length;
+	for (let index = 0; index < length; index++) {
+		let readstream = output[index];
+		resolve = resolve.then(() => readstream.pipeTo(writable, {preventClose: (index+1) !== length}))
+
+	}
+
 	return readable;
 }

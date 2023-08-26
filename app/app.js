@@ -1,4 +1,6 @@
+// @ts-check
 /// <reference types="@fastly/js-compute" />
+
 import { SimpleCache } from 'fastly:cache';
 import { env } from 'fastly:env';
 import UA from "@financial-times/polyfill-useragent-normaliser/lib/normalise-user-agent-c-at-e.js";
@@ -9,9 +11,9 @@ import { logger } from './logger.js'
 import { get as getFile } from "@jakechampion/c-at-e-file-server";
 import { getPolyfillParameters } from "./get-polyfill-parameters.js";
 
-const latestVersion = '3.111.0';
 import * as polyfillio from "./polyfill-libraries/polyfill-library/lib/index.js";
 import { retry } from './retry.js';
+import { ConfigStore } from 'fastly:config-store';
 
 export const app = new Hono()
 app.onError((error, c) => {
@@ -136,56 +138,16 @@ async function streamToString(stream) {
 		string += decoder.decode(value)
 	}
 }
+
 async function polyfill(requestURL, c) {
 	if (!isRunningLocally) {
-		const generation = '173'
+		let config = new ConfigStore('config');
+		const generation = config.get('generation') || '1';
 		let cacheKey = `${generation}:::${requestURL.pathname + requestURL.search}}`;
 		let error = false;
 		let value = await retry(async () => SimpleCache.getOrSet(cacheKey, async () => {
 			const parameters = getPolyfillParameters(requestURL);
-
-			// Map the version parameter to a version of the polyfill library.
-			const versionToLibraryMap = new Map([
-				[latestVersion, 'polyfill-library'],
-				['3.25.1', 'polyfill-library-3.25.1'],
-				['3.27.4', 'polyfill-library-3.27.4'],
-				['3.34.0', 'polyfill-library-3.34.0'],
-				['3.39.0', 'polyfill-library-3.39.0'],
-				['3.40.0', 'polyfill-library-3.40.0'],
-				['3.41.0', 'polyfill-library-3.41.0'],
-				['3.42.0', 'polyfill-library-3.42.0'],
-				['3.46.0', 'polyfill-library-3.46.0'],
-				['3.48.0', 'polyfill-library-3.48.0'],
-				['3.50.2', 'polyfill-library-3.50.2'],
-				['3.51.0', 'polyfill-library-3.51.0'],
-				['3.52.0', 'polyfill-library-3.52.0'],
-				['3.52.1', 'polyfill-library-3.52.1'],
-				['3.52.2', 'polyfill-library-3.52.2'],
-				['3.52.3', 'polyfill-library-3.52.3'],
-				['3.53.1', 'polyfill-library-3.53.1'],
-				['3.89.4', 'polyfill-library-3.89.4'],
-				['3.96.0', 'polyfill-library-3.96.0'],
-				['3.98.0', 'polyfill-library-3.98.0'],
-				['3.101.0', 'polyfill-library-3.101.0'],
-				['3.103.0', 'polyfill-library-3.103.0'],
-				['3.104.0', 'polyfill-library-3.104.0'],
-				['3.108.0', 'polyfill-library-3.108.0'],
-				['3.109.0', 'polyfill-library-3.109.0'],
-				['3.110.1', 'polyfill-library-3.110.1'],
-				['3.111.0', 'polyfill-library-3.111.0'],
-			]);
-
-			const library = versionToLibraryMap.get(parameters.version);
-			// 404 if no library for the requested version was found.
-			if (!library) {
-				error = true;
-				return {
-					value: 'requested version does not exist',
-					ttl: 604800,
-				}
-			}
-
-			let bundle = await polyfillio.getPolyfillString(parameters, library, parameters.version);
+			let bundle = await polyfillio.getPolyfillString(parameters);
 			return {
 				value: await streamToString(bundle),
 				ttl: 604800,
@@ -205,46 +167,7 @@ async function polyfill(requestURL, c) {
 	}
 	const parameters = getPolyfillParameters(requestURL);
 
-	// Map the version parameter to a version of the polyfill library.
-	const versionToLibraryMap = new Map([
-		[latestVersion, 'polyfill-library'],
-		['3.25.1', 'polyfill-library-3.25.1'],
-		['3.27.4', 'polyfill-library-3.27.4'],
-		['3.34.0', 'polyfill-library-3.34.0'],
-		['3.39.0', 'polyfill-library-3.39.0'],
-		['3.40.0', 'polyfill-library-3.40.0'],
-		['3.41.0', 'polyfill-library-3.41.0'],
-		['3.42.0', 'polyfill-library-3.42.0'],
-		['3.46.0', 'polyfill-library-3.46.0'],
-		['3.48.0', 'polyfill-library-3.48.0'],
-		['3.50.2', 'polyfill-library-3.50.2'],
-		['3.51.0', 'polyfill-library-3.51.0'],
-		['3.52.0', 'polyfill-library-3.52.0'],
-		['3.52.1', 'polyfill-library-3.52.1'],
-		['3.52.2', 'polyfill-library-3.52.2'],
-		['3.52.3', 'polyfill-library-3.52.3'],
-		['3.53.1', 'polyfill-library-3.53.1'],
-		['3.89.4', 'polyfill-library-3.89.4'],
-		['3.96.0', 'polyfill-library-3.96.0'],
-		['3.98.0', 'polyfill-library-3.98.0'],
-		['3.101.0', 'polyfill-library-3.101.0'],
-		['3.103.0', 'polyfill-library-3.103.0'],
-		['3.104.0', 'polyfill-library-3.104.0'],
-		['3.108.0', 'polyfill-library-3.108.0'],
-		['3.109.0', 'polyfill-library-3.109.0'],
-		['3.110.1', 'polyfill-library-3.110.1'],
-		['3.111.0', 'polyfill-library-3.111.0'],
-	]);
-
-	const library = versionToLibraryMap.get(parameters.version);
-	// 404 if no library for the requested version was found.
-	if (!library) {
-		c.status(400);
-		c.header("Cache-Control", "public, s-maxage=31536000, max-age=604800, stale-while-revalidate=604800, stale-if-error=604800, immutable");
-		return c.text(`requested version does not exist`);
-	}
-
-	let bundle = await polyfillio.getPolyfillString(parameters, library, parameters.version);
+	let bundle = await polyfillio.getPolyfillString(parameters);
 	return respondWithBundle(c, bundle);
 }
 
@@ -265,7 +188,7 @@ app.notFound((c) => {
 async function handler(c) {
 	let requestURL = new URL(c.req.url);
 	const host = c.req.headers.get('host');
-	FASTLY_SERVICE_VERSION = fastly.env.get('FASTLY_SERVICE_VERSION');
+	FASTLY_SERVICE_VERSION = env('FASTLY_SERVICE_VERSION');
 	c.header('FASTLY_SERVICE_VERSION', FASTLY_SERVICE_VERSION);
 	// Canonicalize requests onto https://polyfill.io (and allow https://polyfills.io)
 	switch (host) {
