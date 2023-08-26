@@ -1,26 +1,29 @@
 // @ts-check
 /// <reference types="@fastly/js-compute" />
-// import { SimpleCache } from 'fastly:cache';
-import { ConfigStore } from 'fastly:config-store';
 import { KVStore } from 'fastly:kv-store';
 import { shouldLog } from "../../../logger";
-// import { retry } from '../../../retry';
+import { includeBytes } from 'fastly:experimental';
 
+/**
+ * @type {Object}
+ */
+let config = (function() {
+	const decoder = new TextDecoder;
+	return JSON.parse(decoder.decode(includeBytes('./app/polyfill-libraries/polyfill-library.json')))
+}());
 /**
  * Get the metadata for a specific polyfill within the collection of polyfill sources.
  * @param {String} featureName - The name of a polyfill whose metadata should be returned.
  * @returns {Promise<Object|undefined>} A promise which resolves with the metadata or with `undefined` if no metadata exists for the polyfill.
  */
-
-let config;
 export async function getPolyfillMeta(featureName) {
 	if (!featureName) { return undefined; }
-	if (!config) {
-		config = new ConfigStore('polyfill_library');
-	}
+	// if (!config) {
+	// 	config = new KVStore('polyfill_library_meta');
+	// }
 	let meta;
 	try {
-		meta = await config.get(featureName)
+		meta = await config[featureName]
 	} catch { /* empty */ }
 	if (!meta) {
 		if (shouldLog()) {
@@ -32,7 +35,13 @@ export async function getPolyfillMeta(featureName) {
 	return b;
 }
 
-let aliases;
+/**
+ * @type {Object}
+*/
+let aliases = (function() {
+	const decoder = new TextDecoder;
+	return JSON.parse(decoder.decode(includeBytes('./app/polyfill-libraries/polyfill-library/polyfills/__dist/aliases.json')))
+}());
 /**
  * Get the polyfills that are under the same alias.
  * @param {string} alias - The name of an alias whose metadata should be returned.
@@ -40,10 +49,7 @@ let aliases;
  */
 export async function getConfigAliases(alias) {
 	if (!alias) { return undefined; }
-	if (!aliases) {
-		aliases = new ConfigStore('polyfill_library_aliases');
-	}
-	let a = aliases.get(alias);
+	let a = aliases[alias];
 	let b = a ? JSON.parse(a) : undefined;
 	return b;
 }
@@ -57,11 +63,11 @@ export async function getConfigAliases(alias) {
 let polyfills;
 export async function streamPolyfillSource(featureName, type) {
 	if (!polyfills) { polyfills = new KVStore('polyfill-library'); }
-	let polyfill = await polyfills.get('/' + featureName + '/' + type + ".js");
+	let polyfill = await polyfills.get(featureName + '.' + type + ".js");
 	if (!polyfill) {
-		polyfill = await polyfills.get('/' + featureName + '/' + type === 'raw' ? 'min' : 'raw' + ".js");
+		polyfill = await polyfills.get(featureName + '.' + type === 'raw' ? 'min' : 'raw' + ".js");
 		if (!polyfill) {
-				throw new Error('streamPolyfillSource missing: /' + featureName + '/' + type + ".js")
+				throw new Error('streamPolyfillSource missing: ' + featureName + '.' + type + ".js")
 			}
 	}
 	return polyfill.body;

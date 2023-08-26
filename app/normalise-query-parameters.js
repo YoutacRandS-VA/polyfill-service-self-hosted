@@ -1,3 +1,4 @@
+// @ts-check
 /* eslint-disable no-cond-assign */
 import * as latestUserAgentNormaliser from "@financial-times/polyfill-useragent-normaliser/lib/normalise-user-agent-c-at-e.js";
 
@@ -51,58 +52,7 @@ export function normalise_querystring_parameters_for_polyfill_bundle(originalReq
         newQuerystring.set('flags', "");
     }
 
-    // # If version is not set, set to default value
-    let version;
-    if (version = currentQuerystring.get('version')) {
-        switch (version) {
-            case "3.111.0":
-            case "3.110.1":
-            case "3.109.0":
-            case "3.108.0":
-            case "3.104.0":
-            case "3.103.0":
-            case "3.101.0":
-            case "3.100.0":
-            case "3.98.0":
-            case "3.96.0":
-            case "3.89.4":
-            case "3.53.1":
-            case "3.52.3":
-            case "3.52.2":
-            case "3.52.1":
-            case "3.52.0":
-            case "3.51.0":
-            case "3.50.2":
-            case "3.49.0":
-            case "3.48.0":
-            case "3.46.0":
-            case "3.45.0":
-            case "3.44.0":
-            case "3.43.0":
-            case "3.42.0":
-            case "3.41.0":
-            case "3.40.0":
-            case "3.39.0":
-            case "3.38.0":
-            case "3.37.0":
-            case "3.36.0":
-            case "3.35.0":
-            case "3.34.0":
-            case "3.28.1":
-            case "3.27.4":
-            case "3.25.3":
-            case "3.25.2":
-            case "3.25.1": {
-                newQuerystring.set('version', version);
-                break;
-            }
-            default: {
-                newQuerystring.set('version', "");
-            }
-        }
-    } else {
-        newQuerystring.set('version', "");
-    }
+    newQuerystring.set('version', "");
 
     let ua;
     if (ua = currentQuerystring.get('ua')) {
@@ -110,7 +60,7 @@ export function normalise_querystring_parameters_for_polyfill_bundle(originalReq
     } else {
         // # If ua is not set, normalise the User-Agent header based upon the version of the polyfill-library that has been requested.
         const useragent = originalRequest.headers.get("User-Agent");
-        const normalisedUserAgent = version === "3.25.1" ? oldUserAgentNormaliser.UA(useragent) : latestUserAgentNormaliser.normalize(useragent);
+        const normalisedUserAgent = latestUserAgentNormaliser.normalize(useragent);
         newQuerystring.set("ua", normalisedUserAgent);
     }
 

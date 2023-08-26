@@ -1,3 +1,4 @@
+// @ts-check
 import { env } from 'fastly:env';
 import {ConfigStore} from 'fastly:config-store';
 var humanize = (times) => {

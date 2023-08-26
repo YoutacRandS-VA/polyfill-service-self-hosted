@@ -1,4 +1,5 @@
 {
+  "type": "module",
   "contributors": [
     {
       "name": "Jake Champion",
@@ -9,24 +10,18 @@
   "scripts": {
     "lint": "eslint .",
     "build": "js-compute-runtime --enable-pbl app/index.js",
-    "start": "fastly compute serve --verbose",
-    "postinstall": "patch-package"
+    "start": "fastly compute serve --verbose"
   },
   "license": "MIT",
   "dependencies": {
     "@fastly/js-compute": "^3.3.1",
     "@financial-times/polyfill-useragent-normaliser": "^1.10.2",
-    "@financial-times/useragent_parser": "^1.6.3",
-    "@jakechampion/c-at-e-file-server": "^0.0.2-main",
     "hono": "^3.3.2",
-    "mnemonist": "^0.39.5",
     "toposort": "^2.0.2"
   },
   "devDependencies": {
     "eslint": "^8.45.0",
-    "eslint-plugin-prettier": "^5.0.0",
-    "eslint-plugin-unicorn": "^48.0.0",
-    "patch-package": "^7.0.2"
+    "eslint-plugin-unicorn": "^48.0.0"
   },
   "volta": {
     "node": "20.3.0"

@@ -1,3 +1,4 @@
+// @ts-check
 export async function retry(function_) {
 	try {
 		return await function_();

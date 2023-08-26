@@ -1,3 +1,4 @@
+// @ts-check
 const latestVersion = '3.111.0';
 
 function featuresfromQueryParameter(featuresParameter, flagsParameter) {
