@@ -11,7 +11,7 @@
     "lint": "eslint .",
     "build": "js-compute-runtime --enable-pbl app/index.js",
     "start": "fastly compute serve --verbose",
-    "deploy": "fastly compute publish && ./upload-polyfill.sh"
+    "deploy": "fastly compute publish && ./upload-polyfills.js"
   },
   "license": "MIT",
   "dependencies": {
@@ -22,7 +22,8 @@
   },
   "devDependencies": {
     "eslint": "^8.45.0",
-    "eslint-plugin-unicorn": "^48.0.0"
+    "eslint-plugin-unicorn": "^48.0.0",
+    "zx": "^7.2.3"
   },
   "volta": {
     "node": "20.3.0"
