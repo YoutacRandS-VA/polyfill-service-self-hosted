@@ -35,7 +35,7 @@ async function getOrCreatePolyfillKVStore() {
 
 async function linkKVStoreToServiceAndActivate() {
     let links = JSON.parse(await zx`fastly resource-link list --version latest --json`)
-    if (links.find(({resource_id}) => resource_id == env.STORE_ID)){
+    if (links.some(({resource_id}) => resource_id == env.STORE_ID)){
         return;
     }
     env.VERSION = JSON.parse(String(await zx`fastly resource-link create -r $STORE_ID --version active --autoclone --name=polyfill-library --json`).trim()).version
