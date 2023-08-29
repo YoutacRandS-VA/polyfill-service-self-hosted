@@ -95,36 +95,48 @@ async function linkKVStoreToServiceAndActivate() {
     await zx`fastly service-version activate --version=$VERSION --quiet --token $FASTLY_API_TOKEN`
 }
 
+function chunks(array, size) {
+    const output = [];
+    for (let index = 0; index < array.length; index += size) {
+        output.push(array.slice(index, index + size));
+    }
+    return output;
+}
+
+
 async function uploadPolyfillsToKVStore() {
     let polyfillsDirectory = join(__dirname, 'app/polyfill-libraries/polyfill-library/polyfills/__dist/');
     const files = await readdir(polyfillsDirectory, { withFileTypes: true});
-    for (const file of files) {
-        await retry(async function() {
-            let url = `https://api.fastly.com/resources/stores/kv/${env.STORE_ID}/keys/${encodeURIComponent(file.name)}`
-            let size = (await stat(join(file.path, file.name))).size
-            let response = await fetch(url, {
-                method: 'HEAD',
-                headers: {
-                    "Fastly-Key": env.FASTLY_API_TOKEN
-                },
+    for (const chunk of chunks(files, 100)) {
+        await Promise.all(chunk.map(file => {
+            return retry(async function() {
+                let url = `https://api.fastly.com/resources/stores/kv/${env.STORE_ID}/keys/${encodeURIComponent(file.name)}`
+                let size = (await stat(join(file.path, file.name))).size
+                let response = await fetch(url, {
+                    method: 'HEAD',
+                    headers: {
+                        "Fastly-Key": env.FASTLY_API_TOKEN
+                    },
+                })
+                if (response.status == 200 && Number.parseInt(response.headers.get('stored-content-length'), 10) == size) {
+                    console.log(`Already uploaded: ${file.name}`)
+                    return;
+                }
+                response = await fetch(url, {
+                    method: 'PUT',
+                    headers: {
+                        "Fastly-Key": env.FASTLY_API_TOKEN
+                    },
+                    body: await readFile(join(file.path, file.name), "utf8")
+                })
+                if (response.status != 200) {
+                    console.log(response.status)
+                    console.error(`Failed to upload: ${url}`)
+                    exit(1)
+                }
+                console.log(`Uploaded: ${file.name}`)
             })
-            if (response.status == 200 && Number.parseInt(response.headers.get('stored-content-length'), 10) == size) {
-                console.log(`Already uploaded: ${file.name}`)
-                return;
-            }
-            response = await fetch(url, {
-                method: 'PUT',
-                headers: {
-                    "Fastly-Key": env.FASTLY_API_TOKEN
-                },
-                body: await readFile(join(file.path, file.name), "utf8")
-            })
-            if (response.status != 200) {
-                console.log(response.status)
-                throw new Error(`Failed to upload: ${url}`)
-            }
-            console.log(`Uploaded: ${file.name}`)
-        })
+        }))
     }
 }
 
