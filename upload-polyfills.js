@@ -3,7 +3,7 @@
 import { $ as zx} from 'zx'
 import { exit, env } from 'node:process'
 
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, stat } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -101,15 +101,26 @@ async function uploadPolyfillsToKVStore() {
     for (const file of files) {
         await retry(async function() {
             let url = `https://api.fastly.com/resources/stores/kv/${env.STORE_ID}/keys/${encodeURIComponent(file.name)}`
-            const resp = await fetch(url, {
+            let size = (await stat(join(file.path, file.name))).size
+            let response = await fetch(url, {
+                method: 'HEAD',
+                headers: {
+                    "Fastly-Key": env.FASTLY_API_TOKEN
+                },
+            })
+            if (response.status == 200 && Number.parseInt(response.headers.get('stored-content-length'), 10) == size) {
+                console.log(`Already uploaded: ${file.name}`)
+                return;
+            }
+            response = await fetch(url, {
                 method: 'PUT',
                 headers: {
                     "Fastly-Key": env.FASTLY_API_TOKEN
                 },
-                body: readFile(join(file.path, file.name), "utf8")
+                body: await readFile(join(file.path, file.name), "utf8")
             })
-            if (resp.status != 200) {
-                console.log(resp.status)
+            if (response.status != 200) {
+                console.log(response.status)
                 throw new Error(`Failed to upload: ${url}`)
             }
             console.log(`Uploaded: ${file.name}`)
@@ -119,5 +130,5 @@ async function uploadPolyfillsToKVStore() {
 
 await getFastlyApiKey()
 await getOrCreatePolyfillKVStore()
-await linkKVStoreToServiceAndActivate()
+// await linkKVStoreToServiceAndActivate()
 await uploadPolyfillsToKVStore()
