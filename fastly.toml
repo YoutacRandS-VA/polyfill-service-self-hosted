@@ -5,8 +5,8 @@ authors = ["me@jakechampion.name"]
 description = "polyfill-service self-hosted cdn implemented in javascript"
 language = "javascript"
 manifest_version = 3
-name = "polyfill-service-self-hosted.edgecompute.app"
-service_id = "VUWDPSA6tPFYPYABVfzLE4"
+name = "polyfill-service-self-hosted"
+service_id = ""
 
 [scripts]
 build = "npm run build"
