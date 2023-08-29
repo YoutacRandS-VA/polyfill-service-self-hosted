@@ -130,5 +130,5 @@ async function uploadPolyfillsToKVStore() {
 
 await getFastlyApiKey()
 await getOrCreatePolyfillKVStore()
-// await linkKVStoreToServiceAndActivate()
+await linkKVStoreToServiceAndActivate()
 await uploadPolyfillsToKVStore()
