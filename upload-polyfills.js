@@ -92,7 +92,7 @@ async function linkKVStoreToServiceAndActivate() {
             Accept: "application/json",
             "Fastly-Key": env.FASTLY_API_TOKEN
         },
-        body: `name=example-test-kv-store&resource_id=${env.STORE_ID}`
+        body: `name=polyfill-library&resource_id=${env.STORE_ID}`
     })
     await zx`fastly service-version activate --version=$VERSION --quiet --token $FASTLY_API_TOKEN`
 }
