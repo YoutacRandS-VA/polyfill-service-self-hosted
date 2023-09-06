@@ -17,8 +17,13 @@ app.use('*', logger());
 
 app.use('*', cors())
 
-app.get("/v3/polyfill.js", polyfillHandler);
-app.get("/v3/polyfill.min.js", polyfillHandler);
+app.get('*', async c => {
+	if (/\/v3\/polyfill(\.min)?\.js$/.test(c.req.path)) {
+		return polyfillHandler(c)
+	}
+	c.res.headers.set("Cache-Control", "public, s-maxage=31536000, max-age=604800, stale-while-revalidate=604800, stale-if-error=604800, immutable");
+	return c.text('Not Found', 404)
+});
 
 app.notFound((c) => {
 	c.res.headers.set("Cache-Control", "public, s-maxage=31536000, max-age=604800, stale-while-revalidate=604800, stale-if-error=604800, immutable");
