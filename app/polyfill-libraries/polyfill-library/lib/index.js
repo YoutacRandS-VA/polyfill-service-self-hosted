@@ -230,11 +230,7 @@ export async function getPolyfillString(options_) {
 					feature.comment =
 						featureName +
 						", License: " +
-						(polyfill.license || "CC0") +
-						(feature.dependencyOf.size > 0 || feature.aliasOf.size > 0 ?
-							' (required by "' + [...feature.dependencyOf, ...feature.aliasOf].join('", "') +
-							'")' :
-							"");
+						(polyfill.license || "CC0");
 				} else {
 					warnings.unknown.push(featureName);
 				}
