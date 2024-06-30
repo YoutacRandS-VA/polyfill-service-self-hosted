@@ -17,7 +17,7 @@
   "dependencies": {
     "@fastly/js-compute": "^3.16.0",
     "@financial-times/polyfill-useragent-normaliser": "^1.10.2",
-    "hono": "^3.3.2",
+    "hono": "^4.2.7",
     "toposort": "^2.0.2"
   },
   "devDependencies": {
